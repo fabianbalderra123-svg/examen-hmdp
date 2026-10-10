@@ -6,7 +6,6 @@ import 'dart:io';
 
 part 'local_database.g.dart';
 
-@Dataclass(['partJson', 'apartadoJson'])
 class LocalPart extends Table {
   IntColumn get id => integer()();
   TextColumn get codigo => text()();
@@ -26,7 +25,6 @@ class LocalPart extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@Dataclass(['apartadoJson'])
 class LocalApartado extends Table {
   IntColumn get id => integer()();
   IntColumn get clienteId => integer()();
@@ -45,7 +43,6 @@ class LocalApartado extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@Dataclass(['metadataJson'])
 class SyncMetadata extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
