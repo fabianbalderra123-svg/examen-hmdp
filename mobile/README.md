@@ -44,7 +44,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 La URL del API se configura automáticamente según el modo de compilación:
 
 - **Desarrollo**: `http://localhost:4000`
-- **Producción**: `https://backexamen1-herramientas.onrender.com`
+- **Producción**: `https://refaccionaria-api-qon3.onrender.com`
 
 Para compilar en modo producción:
 ```bash

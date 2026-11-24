@@ -46,7 +46,7 @@ flutter run
 ## 🎯 Nota Importante
 
 El backend está desplegado y funcionando en:
-- https://backexamen1-herramientas.onrender.com
+- https://refaccionaria-api-qon3.onrender.com
 
 La app móvil detecta automáticamente:
 - **Desarrollo**: Usa localhost:4000

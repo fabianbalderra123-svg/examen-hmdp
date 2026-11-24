@@ -28,7 +28,7 @@ git checkout feature/mobile-app
 #### Opción A: Usar el Backend Desplegado (RECOMENDADO)
 
 El backend ya está funcionando en:
-- URL: https://backexamen1-herramientas.onrender.com
+- URL: https://refaccionaria-api-qon3.onrender.com
 - La app móvil está configurada para usar esta URL automáticamente en producción
 
 No necesitas configurar nada adicional del backend.
@@ -123,7 +123,7 @@ Las coordenadas de la sucursal son de ejemplo. Para usar las reales:
 
 La app móvil detecta automáticamente el modo:
 - **Desarrollo**: Usa `http://localhost:4000`
-- **Producción**: Usa `https://backexamen1-herramientas.onrender.com`
+- **Producción**: Usa `https://refaccionaria-api-qon3.onrender.com`
 
 Para compilar en modo producción:
 ```bash
