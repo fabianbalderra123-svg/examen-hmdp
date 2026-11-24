@@ -18,6 +18,10 @@ Este repositorio contiene:
 - ✅ Soporte offline con base de datos local
 - ✅ Sincronización automática
 
+## 📲 Descargar el APK
+
+El instalable para Android está en [`apk/refaccionaria.apk`](apk/refaccionaria.apk). Ya apunta al backend publicado en https://refaccionaria-api-qon3.onrender.com.
+
 ## 🚀 Inicio Rápido para el Usuario con Flutter
 
 Si ya tienes Flutter instalado, sigue estos 3 pasos:
