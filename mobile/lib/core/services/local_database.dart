@@ -1,8 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 part 'local_database.g.dart';
 
@@ -125,7 +127,7 @@ class LocalDatabase extends _$LocalDatabase {
               ? Value(DateTime.parse(apartado['fechaExpiracion'] as String))
               : const Value.absent(),
           nota: Value(apartado['nota'] as String?),
-          piezaJson: Value(apartado['pieza'] as String),
+          piezaJson: Value(_encodePieza(apartado['pieza'])),
           expirado: Value(apartado['expirado'] as bool? ?? false),
           lastUpdated: Value(now),
         ),
@@ -151,7 +153,7 @@ class LocalDatabase extends _$LocalDatabase {
             ? Value(DateTime.parse(apartado['fechaExpiracion'] as String))
             : const Value.absent(),
         nota: Value(apartado['nota'] as String?),
-        piezaJson: Value(apartado['pieza'] as String),
+        piezaJson: Value(_encodePieza(apartado['pieza'])),
         expirado: Value(apartado['expirado'] as bool? ?? false),
         pendingSync: const Value(true),
         lastUpdated: Value(now),
@@ -166,6 +168,15 @@ class LocalDatabase extends _$LocalDatabase {
   Future<void> markAsSynced(int id) async {
     await (update(localApartado)..where((t) => t.id.equals(id)))
         .write(LocalApartadoCompanion(pendingSync: const Value(false)));
+  }
+
+  Future<void> deleteApartado(int id) async {
+    await (delete(localApartado)..where((t) => t.id.equals(id))).go();
+  }
+
+  String _encodePieza(dynamic pieza) {
+    if (pieza is String) return pieza;
+    return jsonEncode(pieza ?? {});
   }
 
   Future<void> _updateMetadata(String key, String value) async {

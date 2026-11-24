@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/part.dart';
-import '../../../core/services/api_service.dart';
+import '../../../core/providers/api_provider.dart';
+import '../../../core/services/local_database.dart';
 import '../data/parts_repository.dart';
 
 final partsRepositoryProvider = Provider<PartsRepository>((ref) {
-  return PartsRepository(ref.watch(apiServiceProvider));
+  return PartsRepository(ref.watch(apiServiceProvider), LocalDatabase.instance);
 });
 
 final partsListProvider =
@@ -33,14 +34,29 @@ class PartsQueryParams {
   final String sortBy;
   final String sortOrder;
 
-  PartsQueryParams({
+  const PartsQueryParams({
     this.page = 1,
-    this.pageSize = 20,
+    this.pageSize = 100,
     this.search,
     this.categoria,
     this.sortBy = 'id',
     this.sortOrder = 'asc',
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PartsQueryParams &&
+          page == other.page &&
+          pageSize == other.pageSize &&
+          search == other.search &&
+          categoria == other.categoria &&
+          sortBy == other.sortBy &&
+          sortOrder == other.sortOrder;
+
+  @override
+  int get hashCode =>
+      Object.hash(page, pageSize, search, categoria, sortBy, sortOrder);
 
   PartsQueryParams copyWith({
     int? page,

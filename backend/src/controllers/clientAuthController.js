@@ -8,7 +8,7 @@ function signClientToken(client) {
   return jwt.sign(
     { id: client.id, email: client.email, nombre: client.nombre, type: "client" },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
+    { expiresIn: process.env.CLIENT_JWT_EXPIRES_IN || "30d" }
   );
 }
 

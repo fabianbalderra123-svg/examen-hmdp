@@ -1,11 +1,28 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/models/client.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/utils/api_error.dart';
+
+class AuthException implements Exception {
+  final String message;
+  final bool unauthorized;
+
+  AuthException(this.message, {this.unauthorized = false});
+
+  @override
+  String toString() => message;
+}
 
 class AuthRepository {
   final ApiService _apiService;
+  final FlutterSecureStorage _storage;
 
-  AuthRepository(this._apiService);
+  AuthRepository(this._apiService)
+      : _storage = const FlutterSecureStorage();
 
   Future<Map<String, dynamic>> register({
     required String nombre,
@@ -26,9 +43,10 @@ class AuthRepository {
         },
       );
       await _apiService.setToken(response.data['token']);
+      await _cacheClient(Client.fromJson(response.data['client']));
       return response.data;
     } on DioException catch (e) {
-      throw _handleError(e);
+      throw mapDioError(e);
     }
   }
 
@@ -45,9 +63,10 @@ class AuthRepository {
         },
       );
       await _apiService.setToken(response.data['token']);
+      await _cacheClient(Client.fromJson(response.data['client']));
       return response.data;
     } on DioException catch (e) {
-      throw _handleError(e);
+      throw mapDioError(e);
     }
   }
 
@@ -56,25 +75,35 @@ class AuthRepository {
       final response = await _apiService.dio.get(
         '${AppConfig.apiPath}/client-auth/me',
       );
-      return Client.fromJson(response.data['client']);
+      final client = Client.fromJson(response.data['client']);
+      await _cacheClient(client);
+      return client;
     } on DioException catch (e) {
-      throw _handleError(e);
+      if (e.response?.statusCode == 401) {
+        throw AuthException('Sesión expirada', unauthorized: true);
+      }
+      if (isConnectionError(e)) {
+        final cached = await getCachedClient();
+        if (cached != null) return cached;
+      }
+      throw mapDioError(e);
     }
   }
 
   Future<void> logout() async {
     await _apiService.clearToken();
+    await _storage.delete(key: 'client_json');
+  }
+
+  Future<Client?> getCachedClient() async {
+    final raw = await _storage.read(key: 'client_json');
+    if (raw == null) return null;
+    return Client.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  }
+
+  Future<void> _cacheClient(Client client) async {
+    await _storage.write(key: 'client_json', value: jsonEncode(client.toJson()));
   }
 
   ApiService get apiService => _apiService;
-
-  Exception _handleError(DioException error) {
-    if (error.response != null) {
-      final message = error.response?.data['message'] ??
-          error.response?.statusMessage ??
-          'Error desconocido';
-      return Exception(message);
-    }
-    return Exception('Error de conexión: ${error.message}');
-  }
 }

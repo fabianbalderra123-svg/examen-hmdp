@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/auth_provider.dart';
+import '../domain/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -36,11 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authStateProvider);
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
-      if (next.isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else if (next.error != null) {
+      if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(content: Text(next.error!.replaceFirst('Exception: ', ''))),
         );
       }
     });

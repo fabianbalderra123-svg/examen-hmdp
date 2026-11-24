@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/apartado.dart';
-import '../../../core/services/api_service.dart';
+import '../../../core/providers/api_provider.dart';
+import '../../../core/services/local_database.dart';
 import '../data/apartados_repository.dart';
 
 final apartadosRepositoryProvider = Provider<ApartadosRepository>((ref) {
-  return ApartadosRepository(ref.watch(apiServiceProvider));
+  return ApartadosRepository(ref.watch(apiServiceProvider), LocalDatabase.instance);
 });
 
 final apartadosListProvider =
@@ -29,12 +30,24 @@ class ApartadosQueryParams {
   final String sortBy;
   final String sortOrder;
 
-  ApartadosQueryParams({
+  const ApartadosQueryParams({
     this.page = 1,
-    this.pageSize = 20,
-    this.sortBy = 'id',
-    this.sortOrder = 'asc',
+    this.pageSize = 50,
+    this.sortBy = 'fechaCreacion',
+    this.sortOrder = 'desc',
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ApartadosQueryParams &&
+          page == other.page &&
+          pageSize == other.pageSize &&
+          sortBy == other.sortBy &&
+          sortOrder == other.sortOrder;
+
+  @override
+  int get hashCode => Object.hash(page, pageSize, sortBy, sortOrder);
 
   ApartadosQueryParams copyWith({
     int? page,

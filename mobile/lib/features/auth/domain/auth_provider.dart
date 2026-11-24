@@ -1,9 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/client.dart';
-import '../../../core/services/api_service.dart';
+import '../../../core/providers/api_provider.dart';
 import '../data/auth_repository.dart';
-
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(apiServiceProvider));
@@ -16,17 +14,33 @@ final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
-  AuthNotifier(this._repository) : super(AuthState.initial()) {
-    _checkAuthStatus();
+  AuthNotifier(this._repository) : super(AuthState.checking()) {
+    restoreSession();
   }
 
-  Future<void> _checkAuthStatus() async {
-    final isAuthenticated = await _repository._apiService.isAuthenticated();
-    if (isAuthenticated && state.client == null) {
-      try {
-        final client = await _repository.getMe();
-        state = AuthState.authenticated(client);
-      } catch (_) {
+  Future<void> restoreSession() async {
+    state = AuthState.checking();
+    final hasToken = await _repository.apiService.isAuthenticated();
+    if (!hasToken) {
+      state = AuthState.unauthenticated();
+      return;
+    }
+    try {
+      final client = await _repository.getMe();
+      state = AuthState.authenticated(client);
+    } on AuthException catch (e) {
+      if (e.unauthorized) {
+        await _repository.logout();
+        state = AuthState.unauthenticated();
+        return;
+      }
+      state = AuthState.unauthenticated();
+    } catch (_) {
+      final cached = await _repository.getCachedClient();
+      if (cached != null) {
+        state = AuthState.authenticated(cached);
+      } else {
+        await _repository.logout();
         state = AuthState.unauthenticated();
       }
     }
@@ -77,16 +91,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 class AuthState {
   final bool isLoading;
+  final bool isChecking;
   final Client? client;
   final String? error;
 
   AuthState({
     this.isLoading = false,
+    this.isChecking = false,
     this.client,
     this.error,
   });
 
-  factory AuthState.initial() => AuthState();
+  factory AuthState.checking() => AuthState(isChecking: true);
 
   factory AuthState.loading() => AuthState(isLoading: true);
 

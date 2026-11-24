@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/auth/presentation/home_screen.dart';
-import 'features/auth/presentation/login_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/register_screen.dart';
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -17,24 +14,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Refaccionaria',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFf97316),
-          primary: const Color(0xFFf97316),
-          secondary: const Color(0xFFea580c),
-        ),
-        useMaterial3: true,
-        fontFamily: 'DM Sans',
+    return ProviderScope(
+      child: MaterialApp(
+        title: 'Refaccionaria',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: const AuthGate(),
+        routes: {
+          '/register': (context) => const RegisterScreen(),
+        },
       ),
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/home': (context) => const HomeScreen(),
-      },
     );
   }
 }

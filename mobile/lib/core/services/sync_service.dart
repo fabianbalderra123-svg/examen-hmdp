@@ -1,8 +1,8 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/providers/connectivity_provider.dart';
-import '../../../core/services/local_database.dart';
-import '../../apartados/data/apartados_repository.dart';
+import '../../features/apartados/data/apartados_repository.dart';
+import '../../features/apartados/domain/apartados_provider.dart';
+import '../providers/connectivity_provider.dart';
+import 'local_database.dart';
 
 class SyncService {
   final ApartadosRepository _apartadosRepository;
@@ -20,9 +20,9 @@ class SyncService {
           cantidad: apartado.cantidad,
           nota: apartado.nota,
         );
-        await _localDatabase.markAsSynced(apartado.id);
-      } catch (e) {
-        print('Error sincronizando apartado ${apartado.id}: $e');
+        await _localDatabase.deleteApartado(apartado.id);
+      } catch (_) {
+        // Se reintenta en la siguiente reconexión.
       }
     }
   }
@@ -36,21 +36,20 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
 class SyncNotifier extends StateNotifier<SyncState> {
   final SyncService _syncService;
-  Timer? _syncTimer;
+  final Ref _ref;
 
-  SyncNotifier(this._syncService, Ref ref) : super(SyncState.idle()) {
-    _startSyncListener(ref);
+  SyncNotifier(this._syncService, this._ref) : super(SyncState.idle()) {
+    _startSyncListener();
   }
 
-  void _startSyncListener(Ref ref) {
-    ref.listen<ConnectivityStatus>(
-      connectivityProvider,
-      (previous, next) {
-        if (next == ConnectivityStatus.online) {
+  void _startSyncListener() {
+    _ref.listen(connectivityProvider, (previous, next) {
+      next.whenData((status) {
+        if (status == ConnectivityStatus.online) {
           sync();
         }
-      },
-    );
+      });
+    });
   }
 
   Future<void> sync() async {
@@ -59,6 +58,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     state = SyncState.syncing();
     try {
       await _syncService.syncPendingApartados();
+      _ref.invalidate(apartadosListProvider);
       state = SyncState.success();
     } catch (e) {
       state = SyncState.error(e.toString());

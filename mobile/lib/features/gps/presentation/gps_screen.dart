@@ -2,179 +2,148 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/sucursal.dart';
-import '../../domain/gps_provider.dart';
+import '../domain/gps_provider.dart';
 
 class GpsScreen extends ConsumerWidget {
-  const GpsScreen({super.key});
+  final bool embedded;
+
+  const GpsScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sucursalAsync = ref.watch(sucursalProvider);
     final positionAsync = ref.watch(currentPositionProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ubicación de la Sucursal'),
-      ),
-      body: sucursalAsync.when(
-        data: (sucursal) {
-          return SingleChildScrollView(
+    final body = sucursalAsync.when(
+      data: (sucursal) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(sucursalProvider);
+            ref.invalidate(currentPositionProvider);
+            await ref.read(sucursalProvider.future);
+          },
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.store,
-                              size: 32,
-                              color: Theme.of(context).colorScheme.primary,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.store, size: 32, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              sucursal.nombre,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                sucursal.nombre,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _InfoRow(icon: Icons.location_on, label: 'Dirección', value: sucursal.direccion),
+                      const SizedBox(height: 8),
+                      _InfoRow(icon: Icons.phone, label: 'Teléfono', value: sucursal.telefono),
+                      const SizedBox(height: 8),
+                      _InfoRow(icon: Icons.schedule, label: 'Horario', value: sucursal.horario),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tu ubicación',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      positionAsync.when(
+                        data: (position) {
+                          final distanceAsync = ref.watch(distanceProvider(position));
+                          return distanceAsync.when(
+                            data: (distance) => Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Estás a ${_formatDistance(distance)} de la sucursal',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
+                            ),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (error, _) => Text(error.toString()),
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (error, _) => Column(
+                          children: [
+                            const Icon(Icons.location_off, size: 48, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            Text(
+                              error.toString().replaceFirst('Exception: ', ''),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: () => ref.invalidate(currentPositionProvider),
+                              child: const Text('Permitir ubicación'),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        _buildInfoRow(Icons.location_on, 'Dirección', sucursal.direccion),
-                        const SizedBox(height: 8),
-                        _buildInfoRow(Icons.phone, 'Teléfono', sucursal.telefono),
-                        const SizedBox(height: 8),
-                        _buildInfoRow(Icons.schedule, 'Horario', sucursal.horario),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tu ubicación',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        positionAsync.when(
-                          data: (position) {
-                            final distanceAsync = ref.watch(distanceProvider(position));
-                            return distanceAsync.when(
-                              data: (distance) {
-                                return Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.my_location),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primaryContainer,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.directions_car,
-                                            color: Theme.of(context).colorScheme.primary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Distancia: ${_formatDistance(distance)}',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.primary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                              loading: () => const CircularProgressIndicator(),
-                              error: (error, stack) => Text('Error: $error'),
-                            );
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (error, stack) => Column(
-                            children: [
-                              const Icon(Icons.location_off, size: 48, color: Colors.grey),
-                              const SizedBox(height: 8),
-                              Text('No se pudo obtener tu ubicación'),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () => ref.refresh(currentPositionProvider),
-                                child: const Text('Reintentar'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openMaps(sucursal),
-                    icon: const Icon(Icons.map),
-                    label: const Text('Cómo llegar'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'TODO: Reemplazar coordenadas con las reales de la sucursal',
-                  style: TextStyle(
-                    color: Colors.orange[700],
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => _openMaps(context, sucursal),
+                icon: const Icon(Icons.directions),
+                label: const Text('Cómo llegar'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _callPhone(context, sucursal.telefono),
+                icon: const Icon(Icons.phone),
+                label: const Text('Llamar a sucursal'),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 48, color: Colors.red),
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 12),
+              Text(error.toString().replaceFirst('Exception: ', ''), textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              Text('Error: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.refresh(sucursalProvider),
+              FilledButton(
+                onPressed: () => ref.invalidate(sucursalProvider),
                 child: const Text('Reintentar'),
               ),
             ],
@@ -182,24 +151,12 @@ class GpsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
+    if (embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sucursal')),
+      body: body,
     );
   }
 
@@ -210,13 +167,55 @@ class GpsScreen extends ConsumerWidget {
     return '${(distanceInMeters / 1000).toStringAsFixed(1)} km';
   }
 
-  Future<void> _openMaps(Sucursal sucursal) async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=${sucursal.latitud},${sucursal.longitud}';
-    final uri = Uri.parse(url);
+  Future<void> _openMaps(BuildContext context, Sucursal sucursal) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${sucursal.latitud},${sucursal.longitud}',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw Exception('No se pudo abrir Google Maps');
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir Google Maps')),
+      );
     }
+  }
+
+  Future<void> _callPhone(BuildContext context, String telefono) async {
+    final uri = Uri.parse('tel:${telefono.replaceAll(' ', '')}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo iniciar la llamada')),
+      );
+    }
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

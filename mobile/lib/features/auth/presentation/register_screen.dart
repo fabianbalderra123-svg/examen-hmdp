@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/auth_provider.dart';
+import '../domain/auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -50,10 +50,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
       if (next.isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else if (next.error != null) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(content: Text(next.error!.replaceFirst('Exception: ', ''))),
         );
       }
     });

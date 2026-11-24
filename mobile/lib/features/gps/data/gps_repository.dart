@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/models/sucursal.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/utils/api_error.dart';
 
 class GpsRepository {
   final ApiService _apiService;
@@ -16,7 +17,7 @@ class GpsRepository {
       );
       return Sucursal.fromJson(response.data);
     } on DioException catch (e) {
-      throw _handleError(e);
+      throw mapDioError(e);
     }
   }
 
@@ -52,13 +53,4 @@ class GpsRepository {
     return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
   }
 
-  Exception _handleError(DioException error) {
-    if (error.response != null) {
-      final message = error.response?.data['message'] ??
-          error.response?.statusMessage ??
-          'Error desconocido';
-      return Exception(message);
-    }
-    return Exception('Error de conexión: ${error.message}');
-  }
 }

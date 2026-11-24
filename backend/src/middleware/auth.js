@@ -11,6 +11,9 @@ export function authRequired(req, _res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (payload.type === "client") {
+      return next(new HttpError(403, "No autorizado."));
+    }
     req.user = payload;
     return next();
   } catch {

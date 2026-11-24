@@ -19,6 +19,7 @@ class Apartado {
   final String? nota;
   final Part pieza;
   final bool expirado;
+  final bool pendingSync;
 
   Apartado({
     required this.id,
@@ -31,6 +32,7 @@ class Apartado {
     this.nota,
     required this.pieza,
     required this.expirado,
+    this.pendingSync = false,
   });
 
   factory Apartado.fromJson(Map<String, dynamic> json) {
@@ -39,7 +41,7 @@ class Apartado {
       clienteId: json['clienteId'] as int,
       piezaId: json['piezaId'] as int,
       cantidad: json['cantidad'] as int,
-      estado: _parseEstado(json['estado'] as String),
+      estado: parseEstado(json['estado'] as String),
       fechaCreacion: DateTime.parse(json['fechaCreacion'] as String),
       fechaExpiracion: json['fechaExpiracion'] != null
           ? DateTime.parse(json['fechaExpiracion'] as String)
@@ -47,10 +49,11 @@ class Apartado {
       nota: json['nota'] as String?,
       pieza: Part.fromJson(json['pieza'] as Map<String, dynamic>),
       expirado: json['expirado'] as bool? ?? false,
+      pendingSync: json['pendingSync'] as bool? ?? false,
     );
   }
 
-  static ApartadoEstado _parseEstado(String estado) {
+  static ApartadoEstado parseEstado(String estado) {
     switch (estado.toUpperCase()) {
       case 'PENDIENTE':
         return ApartadoEstado.pendiente;
